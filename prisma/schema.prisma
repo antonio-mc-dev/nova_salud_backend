@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model cargo {
+  id          Int        @id @default(autoincrement())
+  nombre      String     @db.VarChar(80)
+  descripcion String?    @db.VarChar(255)
+  empleado    empleado[]
+}
+
+model categoria {
+  id          Int           @id @default(autoincrement())
+  nombre      String        @db.VarChar(80)
+  descripcion String?       @db.VarChar(255)
+  medicamento medicamento[]
+}
+
+model cliente {
+  id          Int           @id @default(autoincrement())
+  nombre      String        @db.VarChar(80)
+  apellido    String        @db.VarChar(80)
+  dni         String?       @db.VarChar(15)
+  ruc         String?       @db.VarChar(15)
+  telefono    String?       @db.VarChar(20)
+  email       String?       @db.VarChar(100)
+  direccion   String?       @db.VarChar(255)
+  comprobante comprobante[]
+}
+
+model comprobante {
+  id                  Int              @id @default(autoincrement())
+  serie               String           @db.VarChar(10)
+  numero              Int
+  tipo_comprobante_id Int
+  cliente_id          Int
+  empleado_id         Int
+  fecha               DateTime         @default(now()) @db.DateTime(0)
+  igv                 Decimal          @default(0.00) @db.Decimal(10, 2)
+  total               Decimal          @default(0.00) @db.Decimal(10, 2)
+  cliente             cliente          @relation(fields: [cliente_id], references: [id], onUpdate: Restrict, map: "fk_comp_cliente")
+  empleado            empleado         @relation(fields: [empleado_id], references: [id], onUpdate: Restrict, map: "fk_comp_empleado")
+  tipo_comprobante    tipo_comprobante @relation(fields: [tipo_comprobante_id], references: [id], onUpdate: Restrict, map: "fk_comp_tipo_comprobante")
+  detalle_venta       detalle_venta[]
+
+  @@unique([serie, numero], map: "uq_comprobante")
+  @@index([cliente_id], map: "fk_comp_cliente")
+  @@index([empleado_id], map: "fk_comp_empleado")
+  @@index([tipo_comprobante_id], map: "fk_comp_tipo_comprobante")
+}
+
+model detalle_venta {
+  id                    Int                @id @default(autoincrement())
+  comprobante_id        Int
+  medicamento_precio_id Int
+  cantidad              Int
+  precio_unitario       Decimal            @db.Decimal(10, 2)
+  subtotal              Decimal            @db.Decimal(10, 2)
+  comprobante           comprobante        @relation(fields: [comprobante_id], references: [id], onUpdate: Restrict, map: "fk_det_comprobante")
+  medicamento_precio    medicamento_precio @relation(fields: [medicamento_precio_id], references: [id], onUpdate: Restrict, map: "fk_det_medicamento_precio")
+
+  @@index([comprobante_id], map: "fk_det_comprobante")
+  @@index([medicamento_precio_id], map: "fk_det_medicamento_precio")
+}
+
+model empleado {
+  id          Int           @id @default(autoincrement())
+  nombre      String        @db.VarChar(80)
+  apellido    String        @db.VarChar(80)
+  dni         String        @unique(map: "uq_empleado_dni") @db.VarChar(15)
+  email       String        @unique(map: "uq_empleado_email") @db.VarChar(100)
+  telefono    String?       @db.VarChar(20)
+  cargo_id    Int
+  contrasena  String        @db.VarChar(255)
+  activo      Boolean       @default(true)
+  comprobante comprobante[]
+  cargo       cargo         @relation(fields: [cargo_id], references: [id], onUpdate: Restrict, map: "fk_emp_cargo")
+
+  @@index([cargo_id], map: "fk_emp_cargo")
+}
+
+model laboratorio {
+  id          Int           @id @default(autoincrement())
+  nombre      String        @db.VarChar(100)
+  pais        String        @db.VarChar(60)
+  telefono    String?       @db.VarChar(20)
+  email       String?       @db.VarChar(100)
+  activo      Boolean       @default(true)
+  medicamento medicamento[]
+}
+
+model medicamento {
+  id                 Int                  @id @default(autoincrement())
+  nombre             String               @db.VarChar(150)
+  principio_activo   String?              @db.VarChar(150)
+  descripcion        String?              @db.VarChar(500)
+  laboratorio_id     Int
+  categoria_id       Int
+  presentacion_id    Int
+  activo             Boolean              @default(true)
+  categoria          categoria            @relation(fields: [categoria_id], references: [id], onUpdate: Restrict, map: "fk_med_categoria")
+  laboratorio        laboratorio          @relation(fields: [laboratorio_id], references: [id], onUpdate: Restrict, map: "fk_med_laboratorio")
+  presentacion       presentacion         @relation(fields: [presentacion_id], references: [id], onUpdate: Restrict, map: "fk_med_presentacion")
+  medicamento_precio medicamento_precio[]
+
+  @@index([categoria_id], map: "fk_med_categoria")
+  @@index([laboratorio_id], map: "fk_med_laboratorio")
+  @@index([presentacion_id], map: "fk_med_presentacion")
+}
+
+model medicamento_precio {
+  id              Int             @id @default(autoincrement())
+  medicamento_id  Int
+  unidad_venta_id Int
+  precio          Decimal         @db.Decimal(10, 2)
+  stock           Int             @default(0)
+  detalle_venta   detalle_venta[]
+  medicamento     medicamento     @relation(fields: [medicamento_id], references: [id], onUpdate: Restrict, map: "fk_precio_medicamento")
+  unidad_venta    unidad_venta    @relation(fields: [unidad_venta_id], references: [id], onUpdate: Restrict, map: "fk_precio_unidad_venta")
+
+  @@unique([medicamento_id, unidad_venta_id], map: "uq_med_unidad")
+  @@index([unidad_venta_id], map: "fk_precio_unidad_venta")
+}
+
+model presentacion {
+  id          Int           @id @default(autoincrement())
+  nombre      String        @db.VarChar(60)
+  medicamento medicamento[]
+}
+
+model tipo_comprobante {
+  id          Int           @id @default(autoincrement())
+  nombre      String        @db.VarChar(30)
+  comprobante comprobante[]
+}
+
+model unidad_venta {
+  id                 Int                  @id @default(autoincrement())
+  nombre             String               @db.VarChar(60)
+  medicamento_precio medicamento_precio[]
+}
