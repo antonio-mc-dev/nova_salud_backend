@@ -91,7 +91,7 @@ export const crearVenta = async (data, empleado_id) => {
       },
       include: {
         tipo_comprobante: { select: { nombre: true } },
-        cliente: { select: { nombre: true, apellido: true, dni: true } },
+        cliente: { select: { nombre: true, apellido: true, dni: true, ruc: true, direccion: true } },
         empleado: { select: { nombre: true, apellido: true } },
         detalle_venta: {
           include: {
